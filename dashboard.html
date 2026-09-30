@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Primary Arms — Lighthouse Baseline</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1"></script>
+<style>
+:root{--bg:#f3f4f6;--card:#fff;--text:#111827;--muted:#6b7280;--line:#e5e7eb;--head:#1f2937;--pos:#15803d;--neg:#b91c1c;--warn:#b45309;
+  --home:#2563eb;--category:#d97706;--product:#7c3aed;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1115;--card:#181b22;--text:#e5e7eb;--muted:#9ca3af;--line:#2a2f3a;--head:#0b0d12}}
+:root[data-theme=dark]{--bg:#0f1115;--card:#181b22;--text:#e5e7eb;--muted:#9ca3af;--line:#2a2f3a;--head:#0b0d12}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.wrap{max-width:1200px;margin:0 auto;padding:16px}
+header{background:var(--head);color:#fff;border-radius:10px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+header h1{font-size:18px;margin:0}header small{opacity:.7;display:block;font-size:12px}
+.filters{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.filters select,.filters input{padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#fff;font-size:13px}
+.filters label{font-size:12px;opacity:.8}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:14px 0}
+.kpi{background:var(--card);border-radius:10px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.08);border-top:3px solid var(--muted)}
+.kpi .l{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted)}
+.kpi .v{font-size:26px;font-weight:700;margin:2px 0}.kpi .d{font-size:12px;color:var(--muted)}
+.pos{color:var(--pos)}.neg{color:var(--neg)}.warn{color:var(--warn)}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px;margin-bottom:12px}
+.card{background:var(--card);border-radius:10px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card h3{margin:0 0 10px;font-size:13px;font-weight:600}
+canvas{max-height:280px}
+.tbl{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
+th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--line);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer}
+td{padding:7px 10px;border-bottom:1px solid var(--line)}
+.chip{display:inline-block;min-width:44px;text-align:center;padding:2px 6px;border-radius:4px;font-weight:600}
+.chip.pos{background:rgba(21,128,61,.15)}.chip.neg{background:rgba(185,28,28,.15)}.chip.flat{color:var(--muted)}
+.empty{padding:40px;text-align:center;color:var(--muted)}
+.foot{color:var(--muted);font-size:12px;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div><h1>Lighthouse Baseline — primaryarms.com</h1><small id="asof">No data loaded</small></div>
+  <div class="filters">
+    <label>Grain</label><select id="grain"><option value="month">Monthly</option><option value="week">Weekly</option></select>
+    <label>Device</label><select id="device"><option value="mobile">Mobile</option><option value="desktop">Desktop</option></select>
+    <label>Version</label><select id="ver"><option value="all">All</option><option value="v1">v1 (current site)</option><option value="v2">v2 (new site)</option></select>
+    <label>Load CSV</label><input type="file" id="file" accept=".csv">
+  </div>
+</header>
+
+<section class="kpis" id="kpis"></section>
+<section class="card tbl" style="margin-bottom:12px"><h3>What moved — latest period vs prior period and vs baseline</h3><div id="changes"></div></section>
+<section class="charts">
+  <div class="card"><h3>Performance score (lab, median of pooled runs)</h3><canvas id="c1"></canvas></div>
+  <div class="card"><h3>Field LCP p75 (CrUX, ms) — what Google ranks on</h3><canvas id="c2"></canvas></div>
+  <div class="card"><h3>Accessibility · Best Practices · SEO (homepage)</h3><canvas id="c3"></canvas></div>
+  <div class="card"><h3>Lab LCP (s) · TBT (ms)</h3><canvas id="c4"></canvas></div>
+</section>
+<section class="card tbl"><h3>All rows</h3><div id="table"></div></section>
+<p class="foot">Lab scores come from PageSpeed Insights (Lighthouse on Google hardware). Field values are CrUX p75 over the trailing 28 days. Performance changes under 5 points are noise. Each point is the median of all runs in that week or month. Source of truth: <code>data/lighthouse_raw.csv</code>.</p>
+</div>
+
+<!-- The workflow injects data/lighthouse_raw.csv here on every run. Medians are computed in-browser at the chosen grain. -->
+<script id="csv-data" type="text/csv">
+run_date,run_week,run_month,run_index,page_key,url,device,source,site_version,performance,accessibility,best_practices,seo,fcp_s,lcp_s,tbt_ms,cls,speed_index_s,field_scope,field_cwv_status,field_lcp_ms,field_inp_ms,field_cls,lighthouse_version,chrome_version,notes
+</script>
+
+<script>
+const COLORS={home:getCss('--home'),category:getCss('--category'),product:getCss('--product')};
+const LABEL={home:'Homepage',category:'AR-15 Rifles',product:'PLx HTX-1 PDP'};
+let RAW=[],DATA=[],charts={};
+const MED=['performance','accessibility','best_practices','seo','fcp_s','lcp_s','tbt_ms','cls','speed_index_s'];
+function isoWeek(d){const x=new Date(d+'T00:00:00Z');const day=(x.getUTCDay()+6)%7;x.setUTCDate(x.getUTCDate()-day+3);const y=x.getUTCFullYear();const jan4=new Date(Date.UTC(y,0,4));const w=1+Math.round(((x-jan4)/864e5-3+((jan4.getUTCDay()+6)%7))/7);return y+'-W'+String(w).padStart(2,'0')}
+function aggregate(raw,grain){const g={};raw.forEach(r=>{const key=grain==='week'?(r.run_week||isoWeek(r.run_date)):r.run_month;const k=key+'|'+r.page_key+'|'+r.device;(g[k]=g[k]||{key,rows:[]}).rows.push(r)});
+  return Object.values(g).map(({key,rows})=>{const good=rows.filter(r=>r.performance!=null);const src=good.length?good:rows;const o={run_month:key,run_date:rows.map(r=>r.run_date).sort().pop(),page_key:rows[0].page_key,device:rows[0].device,site_version:rows[0].site_version,runs:good.length,url:rows[0].url};
+    MED.forEach(c=>{o[c]=median(src.map(r=>r[c]));if(o[c]!=null&&['performance','accessibility','best_practices','seo'].includes(c))o[c]=Math.round(o[c])});
+    ['field_scope','field_cwv_status','field_lcp_ms','field_inp_ms','field_cls'].forEach(c=>{const f=rows.find(r=>r[c]!=null&&r[c]!=='');o[c]=f?f[c]:''});
+    o.notes=[...new Set(rows.map(r=>r.notes).filter(Boolean))].join(' | ');return o});}
+function getCss(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
+function parseCSV(t){const lines=t.trim().split(/\r?\n/).filter(l=>l.trim());if(lines.length<2)return[];const h=lines[0].split(',');
+  return lines.slice(1).map(l=>{const c=l.split(',');const o={};h.forEach((k,i)=>o[k]=(c[i]??'').trim());
+    ['performance','accessibility','best_practices','seo','fcp_s','lcp_s','tbt_ms','cls','speed_index_s','field_lcp_ms','field_inp_ms','field_cls','runs'].forEach(k=>o[k]=o[k]===''?null:+o[k]);return o;});}
+function filtered(){const d=document.getElementById('device').value,v=document.getElementById('ver').value;
+  return DATA.filter(r=>r.device===d&&(v==='all'||r.site_version===v)).sort((a,b)=>a.run_month.localeCompare(b.run_month));}
+function months(rows){return [...new Set(rows.map(r=>r.run_month))].sort()}
+function series(rows,page,col,ver){const m=months(rows);return m.map(mo=>{const r=rows.find(x=>x.run_month===mo&&x.page_key===page&&(!ver||x.site_version===ver));return r?r[col]:null})}
+const CATS=[['performance','Perf'],['accessibility','A11y'],['best_practices','BP'],['seo','SEO']];
+const NOISE={performance:5,accessibility:0,best_practices:0,seo:0};
+function chip(d,col,inv){if(d==null||isNaN(d))return'<span class="chip flat">—</span>';const th=NOISE[col]??0;const sign=inv?-d:d;const cls=Math.abs(d)<=th?'flat':sign>0?'pos':'neg';
+  const txt=(d>0?'+':'')+(Number.isInteger(d)?d:d.toFixed(2));return`<span class="chip ${cls}">${txt}</span>`}
+function baseline(rows,page,col){const v=rows.filter(r=>r.page_key===page&&r[col]!=null).slice(0,3).map(r=>r[col]);return median(v)}
+function median(a){const s=a.filter(x=>x!=null).sort((x,y)=>x-y);if(!s.length)return null;const m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2}
+function render(){DATA=aggregate(RAW,document.getElementById('grain').value);const rows=filtered();const el=document.getElementById('kpis');
+  if(!DATA.length){el.innerHTML='<div class="card empty">No data yet. The workflow fills this on its first run, or use Load CSV with <code>lighthouse_raw.csv</code>.</div>';Object.values(charts).forEach(c=>c.destroy());charts={};document.getElementById('table').innerHTML='';document.getElementById('changes').innerHTML='';return;}
+  const ms=months(rows),last=ms[ms.length-1];document.getElementById('asof').textContent=`Data through ${last} · ${RAW.length} runs · ${DATA.length} ${document.getElementById('grain').value==='week'?'weekly':'monthly'} points`;
+  el.innerHTML=['home','category','product'].map(p=>{const cur=rows.find(r=>r.run_month===last&&r.page_key===p);if(!cur)return'';
+    const prev3=rows.filter(r=>r.page_key===p&&r.run_month<last).slice(-3).map(r=>r.performance);const base=median(prev3);
+    const delta=base==null?null:cur.performance-base;const cls=delta==null?'':delta<=-8?'neg':delta>=8?'pos':'';
+    const fld=cur.field_cwv_status?`CWV ${cur.field_cwv_status.toUpperCase()} (${cur.field_scope})`:'no field data';
+    return`<div class="kpi" style="border-top-color:${COLORS[p]}"><div class="l">${LABEL[p]} · Performance</div><div class="v">${cur.performance??'—'}</div>
+      <div class="d ${cls}">${delta==null?'no 3-mo baseline yet':(delta>0?'+':'')+delta.toFixed(0)+' vs prior-3 median'} · ${fld}</div></div>`}).join('');
+  // changes table
+  const prevKey=ms[ms.length-2];const ch=document.getElementById('changes');
+  ch.innerHTML=`<table><thead><tr><th>page</th>${CATS.map(([,l])=>`<th>${l}</th><th>Δ prior</th><th>Δ base</th>`).join('')}<th>Field LCP</th><th>Δ prior</th><th>CWV</th></tr></thead><tbody>${['home','category','product'].map(p=>{
+    const cur=rows.find(r=>r.run_month===last&&r.page_key===p),prev=rows.find(r=>r.run_month===prevKey&&r.page_key===p);if(!cur)return'';
+    const cells=CATS.map(([c])=>{const b=baseline(rows,p,c);return`<td>${cur[c]??'—'}</td><td>${chip(prev&&prev[c]!=null?cur[c]-prev[c]:null,c)}</td><td>${chip(b!=null?cur[c]-b:null,c)}</td>`}).join('');
+    const fl=cur.field_lcp_ms,fp=prev?prev.field_lcp_ms:null;const fd=(fl!=null&&fp!=null&&fl!==''&&fp!=='')?fl-fp:null;
+    const cwv=cur.field_cwv_status?`<span class="${cur.field_cwv_status==='pass'?'pos':'neg'}">${cur.field_cwv_status}</span>${prev&&prev.field_cwv_status&&prev.field_cwv_status!==cur.field_cwv_status?' <small>(was '+prev.field_cwv_status+')</small>':''}`:'—';
+    return`<tr><td><b style="color:${COLORS[p]}">${LABEL[p]}</b></td>${cells}<td>${fl===''||fl==null?'—':fl}</td><td>${chip(fd,'field',true)}</td><td>${cwv}</td></tr>`}).join('')}</tbody></table>
+    <div class="foot">Δ prior = vs the previous ${document.getElementById('grain').value}. Δ base = vs the median of the first three periods on record. Performance moves of ≤5 points are shown grey (noise). Field LCP: lower is better.</div>`;
+  const mk=(id,cfg)=>{charts[id]&&charts[id].destroy();charts[id]=new Chart(document.getElementById(id),cfg)};
+  const vers=[...new Set(rows.map(r=>r.site_version))];
+  const ds=(col,extra={})=>['home','category','product'].flatMap(p=>vers.map(v=>({label:LABEL[p]+(vers.length>1?' '+v:''),data:series(rows,p,col,v),borderColor:COLORS[p],backgroundColor:COLORS[p]+'33',tension:.3,spanGaps:false,borderDash:v==='v2'?[6,4]:[],...extra})));
+  const opt=(yMax,title)=>({responsive:true,animation:false,plugins:{legend:{labels:{color:getCss('--text')}}},scales:{x:{ticks:{color:getCss('--muted')},grid:{color:getCss('--line')}},y:{min:0,max:yMax,ticks:{color:getCss('--muted')},grid:{color:getCss('--line')},title:{display:!!title,text:title,color:getCss('--muted')}}}});
+  mk('c1',{type:'line',data:{labels:ms,datasets:ds('performance')},options:opt(100)});
+  mk('c2',{type:'line',data:{labels:ms,datasets:ds('field_lcp_ms')},options:opt(undefined,'ms')});
+  mk('c3',{type:'line',data:{labels:ms,datasets:[['accessibility','#059669'],['best_practices','#0891b2'],['seo','#dc2626']].map(([c,col])=>({label:c.replace('_',' '),data:series(rows,'home',c),borderColor:col,tension:.3,spanGaps:false}))},options:opt(100)});
+  mk('c4',{type:'line',data:{labels:ms,datasets:[...ds('lcp_s',{yAxisID:'y'}),...ds('tbt_ms',{yAxisID:'y2',borderDash:[4,4]}).map(d=>({...d,label:d.label+' TBT'}))]},
+    options:{...opt(),scales:{...opt().scales,y2:{position:'right',min:0,ticks:{color:getCss('--muted')},grid:{drawOnChartArea:false},title:{display:true,text:'TBT ms',color:getCss('--muted')}}}}});
+  const cols=['run_month','page_key','device','site_version','runs','performance','Δperf','accessibility','best_practices','seo','lcp_s','tbt_ms','cls','field_cwv_status','field_lcp_ms','field_inp_ms','field_cls','notes'];
+  const asc=DATA.slice().sort((a,b)=>a.run_month.localeCompare(b.run_month));
+  asc.forEach(r=>{const prev=asc.filter(x=>x.page_key===r.page_key&&x.device===r.device&&x.site_version===r.site_version&&x.run_month<r.run_month).pop();r['Δperf']=prev&&prev.performance!=null&&r.performance!=null?chip(r.performance-prev.performance,'performance'):'<span class="chip flat">—</span>'});
+  const all=asc.reverse().sort((a,b)=>b.run_month.localeCompare(a.run_month)||a.page_key.localeCompare(b.page_key)||a.device.localeCompare(b.device));
+  document.getElementById('table').innerHTML=`<table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${all.map(r=>`<tr>${cols.map(c=>`<td>${r[c]??''}</td>`).join('')}</tr>`).join('')}</tbody></table>`;}
+document.getElementById('grain').onchange=render;document.getElementById('device').onchange=render;document.getElementById('ver').onchange=render;
+document.getElementById('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{RAW=parseCSV(rd.result);render()};rd.readAsText(f)};
+RAW=parseCSV(document.getElementById('csv-data').textContent);render();
+</script>
+</body>
+</html>
