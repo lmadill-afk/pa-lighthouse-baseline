@@ -1,21 +1,23 @@
-# Lighthouse Baseline Tracker — package contents
+# Lighthouse Baseline Tracker
 
-| file | purpose |
+Weekly-sampled, monthly-reported Lighthouse + CrUX baseline for three primaryarms.com pages, collected by GitHub Actions from the PageSpeed Insights API.
+
+## In this repo
+| path | purpose |
 |---|---|
-| `PROJECT_RULES.md` | Paste into the Claude Project's custom instructions. Evergreen. |
-| `TRACKER_CONFIG.md` | Monthly-editable: URLs, cadence, thresholds, known-changes log, new-site URL map. Upload to Project knowledge; re-upload when edited. |
-| `CHROME_SHORTCUT_PROMPT.md` | Save as a Claude in Chrome shortcut (`/lighthouse-monthly`) and schedule monthly. Manual collection path. |
-| `scripts/psi_collect.py` + `.github/workflows/psi-monthly.yml` | Automated collection path via PageSpeed Insights API. Drop into a private repo (pattern matches `pa-search-snapshots`). Needs a `PSI_API_KEY` repo secret. |
+| `.github/workflows/psi-weekly.yml` | Cron Mondays 14:00 UTC. Also runnable manually. |
+| `scripts/psi_collect.py` | Fetches PSI, appends raw CSV, rebuilds monthly medians, injects raw CSV into `dashboard.html`. |
 | `data/lighthouse_raw.csv` | Every run. Append-only. |
-| `data/lighthouse_monthly.csv` | Median per page × device × month. Dashboard source. |
+| `data/lighthouse_monthly.csv` | Median per page × device × month (pools ~12 weekly runs). |
 | `data/SCHEMA.md` | Column definitions. |
-| `dashboard.html` | Self-contained. Paste `lighthouse_monthly.csv` into the `csv-data` block, or use the Load CSV button. |
+| `TRACKER_CONFIG.md` | Pages, cadence, thresholds, known-changes log, new-site URL map. Edit this, not the script. |
+| `dashboard.html` | Self-contained dashboard with weekly/monthly toggle, regenerated every run. Open in a browser or serve via GitHub Pages. |
 
-## Monthly loop (Chrome path)
-1. Shortcut fires → paste its CSV block into the Project.
-2. Project validates, appends raw, rebuilds monthly, refreshes dashboard, writes 5-line summary.
-3. Re-upload the two CSVs and dashboard to Project knowledge (replace old versions).
+## In the Claude Project (not the repo)
+- `PROJECT_RULES.md` → custom instructions. Commands: `Status`, `Monthly`, `Dashboard`, `Trend`, `Check`.
+- `CHROME_SHORTCUT_PROMPT.md` → fallback manual collector, only if the Action fails.
 
-## Monthly loop (API path)
-1. Action runs on the 1st and commits both CSVs.
-2. Paste `lighthouse_monthly.csv` into the Project (or connect the repo) for the summary + dashboard refresh.
+## Setup
+1. Repo secret `PSI_API_KEY` (PageSpeed Insights API key, API-restricted).
+2. Settings → Actions → General → Workflow permissions → Read and write.
+3. Actions → Run workflow once to seed the baseline.
