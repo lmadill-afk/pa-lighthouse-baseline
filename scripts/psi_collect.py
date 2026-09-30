@@ -3,6 +3,7 @@
 
 Same Lighthouse engine PSI's web UI uses, same Google-hosted hardware, no browser session needed.
 Usage: PSI_API_KEY=... python scripts/psi_collect.py [--runs 3] [--site-version v1]
+Runs weekly; rows carry run_week (ISO, YYYY-Www) and run_month. Monthly medians pool all runs in the month.
 Keyless calls work but are rate-limited; get a free key at console.cloud.google.com (PageSpeed Insights API).
 """
 import argparse, csv, datetime as dt, json, os, statistics, sys, time, urllib.parse, urllib.request
@@ -22,13 +23,43 @@ LAB = {"fcp_s": ("first-contentful-paint", 1000), "lcp_s": ("largest-contentful-
 MED_COLS = ["performance", "accessibility", "best_practices", "seo", "fcp_s", "lcp_s", "tbt_ms", "cls", "speed_index_s"]
 
 
+def iso_week(d):
+    y, w, _ = dt.date.fromisoformat(d).isocalendar()
+    return f"{y}-W{w:02d}"
+
+
+def ensure_columns(path):
+    """Migrate a raw CSV written before run_week existed: add the column, backfill from run_date."""
+    with open(path, newline="") as f:
+        rows = list(csv.reader(f))
+    if not rows or "run_week" in rows[0]:
+        return
+    hdr = rows[0]
+    i = hdr.index("run_date") + 1
+    hdr.insert(i, "run_week")
+    for r in rows[1:]:
+        r.insert(i, iso_week(r[0]) if r and r[0] else "")
+    with open(path, "w", newline="") as f:
+        csv.writer(f).writerows(rows)
+    print("migrated raw CSV: added run_week")
+
+
 def fetch(url, strategy, key):
     q = [("url", url), ("strategy", strategy)] + [("category", c) for c in CATS]
     if key:
         q.append(("key", key))
     req = urllib.request.Request(API + "?" + urllib.parse.urlencode(q), headers={"User-Agent": "pa-lighthouse-tracker"})
-    with urllib.request.urlopen(req, timeout=180) as r:
-        return json.load(r)
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(req, timeout=180) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 500, 502, 503) and attempt < 3:
+                wait = 30 * (attempt + 1)
+                print(f"    {e.code} on attempt {attempt + 1}, retrying in {wait}s", file=sys.stderr)
+                time.sleep(wait)
+                continue
+            raise
 
 
 def field_block(data):
@@ -56,7 +87,7 @@ def row_from(data, page_key, url, device, run_index, today, site_version):
     if final.rstrip("/") != url.rstrip("/"):
         notes = "wrong_page redirected_to " + final.replace(",", " ")
     return {
-        "run_date": today, "run_month": today[:7], "run_index": run_index, "page_key": page_key, "url": url,
+        "run_date": today, "run_week": iso_week(today), "run_month": today[:7], "run_index": run_index, "page_key": page_key, "url": url,
         "device": device, "source": "psi_api", "site_version": site_version,
         "performance": score("performance"), "accessibility": score("accessibility"),
         "best_practices": score("best-practices"), "seo": score("seo"), **lab,
@@ -108,13 +139,35 @@ def rebuild_monthly():
             w.writerow({k: m.get(k, "") for k in header})
 
 
+def rebuild_dashboard():
+    """Inject the monthly CSV into dashboard.html so the repo always holds a current dashboard."""
+    path = "dashboard.html"
+    if not os.path.exists(path):
+        return
+    html = open(path, encoding="utf-8").read()
+    start_tag = '<script id="csv-data" type="text/csv">'
+    a = html.find(start_tag)
+    b = html.find("</script>", a)
+    if a < 0 or b < 0:
+        print("dashboard.html has no csv-data block; skipped", file=sys.stderr)
+        return
+    csv_text = open(RAW, encoding="utf-8").read().strip()
+    html = html[: a + len(start_tag)] + "\n" + csv_text + "\n" + html[b:]
+    open(path, "w", encoding="utf-8").write(html)
+    print("dashboard.html rebuilt")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--runs", type=int, default=3)
     ap.add_argument("--site-version", default="v1")
     a = ap.parse_args()
-    key = os.environ.get("PSI_API_KEY", "")
+    key = os.environ.get("PSI_API_KEY", "").strip()
+    if not key:
+        sys.exit("PSI_API_KEY is empty. Add it as a repo secret (Settings > Secrets and variables > Actions) with that exact name.")
+    print(f"using API key ending in ...{key[-4:]}")
     today = dt.date.today().isoformat()
+    ensure_columns(RAW)
     rows = []
     for i in range(1, a.runs + 1):
         for page_key, url in PAGES.items():
@@ -125,12 +178,13 @@ def main():
                     print(f"ok  run{i} {page_key} {device} perf={rows[-1]['performance']}")
                 except Exception as e:  # noqa: BLE001
                     print(f"ERR run{i} {page_key} {device}: {e}", file=sys.stderr)
-                    rows.append({"run_date": today, "run_month": today[:7], "run_index": i, "page_key": page_key,
+                    rows.append({"run_date": today, "run_week": iso_week(today), "run_month": today[:7], "run_index": i, "page_key": page_key,
                                  "url": url, "device": device, "source": "psi_api", "site_version": a.site_version,
                                  "notes": "psi_error " + str(e).replace(",", " ")[:80]})
-                time.sleep(2)
+                time.sleep(5)
     append(RAW, rows)
     rebuild_monthly()
+    rebuild_dashboard()
     print(f"appended {len(rows)} rows; monthly rebuilt")
 
 
