@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Primary Arms — Site Speed Baseline</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1"></script>
+<style>
+:root{--bg:#f1f3f4;--card:#fff;--text:#202124;--muted:#5f6368;--line:#dadce0;--good:#0d904f;--ni:#f29900;--poor:#d93025;--accent:#1a73e8;--sel:#e8f0fe;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#1b1c1e;--card:#2a2b2e;--text:#e8eaed;--muted:#9aa0a6;--line:#3c4043;--sel:#2b3a55}}
+:root[data-theme=dark]{--bg:#1b1c1e;--card:#2a2b2e;--text:#e8eaed;--muted:#9aa0a6;--line:#3c4043;--sel:#2b3a55}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 "Google Sans",Roboto,system-ui,-apple-system,Segoe UI,sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:24px 20px 48px}
+.top{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;margin-bottom:24px}
+h1{font-size:28px;font-weight:400;margin:0}
+.sub{color:var(--muted);font-size:15px;margin-top:4px}
+.ctl{display:flex;gap:8px;flex-wrap:wrap}
+.ctl select{font:inherit;font-size:15px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text)}
+.ctl label.file{font-size:15px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);cursor:pointer}
+.ctl input{display:none}
+.panel{background:var(--card);border-radius:12px;padding:24px;box-shadow:0 1px 2px rgba(0,0,0,.08);margin-bottom:20px}
+h2{font-size:22px;font-weight:400;margin:0 0 4px}
+.hint{color:var(--muted);font-size:15px;margin:0 0 20px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:24px}
+.card{padding:20px 22px;border-right:1px solid var(--line);cursor:pointer;position:relative;background:var(--card);min-height:130px}
+.card:last-child{border-right:0}
+.card.sel{background:var(--sel)}
+.card .n{font-size:15px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.card .n .dot{width:12px;height:12px;border-radius:2px;display:inline-block}
+.card .v{font-size:44px;font-weight:400;line-height:1.1;margin:6px 0 2px}
+.card .d{font-size:15px;color:var(--muted)}
+.card .d b{font-weight:500}
+.card .d.up{color:var(--good)}.card .d.down{color:var(--poor)}
+.card .f{font-size:13px;color:var(--muted);margin-top:6px}
+.card.good{border-top:6px solid var(--good)}.card.ni{border-top:6px solid var(--ni)}.card.poor{border-top:6px solid var(--poor)}.card.none{border-top:6px solid var(--line)}
+.chart{position:relative;height:300px}
+.legend{display:flex;gap:20px;font-size:14px;color:var(--muted);margin-top:8px;flex-wrap:wrap}
+.legend span::before{content:"";display:inline-block;width:14px;height:6px;margin-right:6px;vertical-align:middle;border-radius:2px;background:var(--c)}
+.empty{padding:48px;text-align:center;color:var(--muted);font-size:17px}
+details{margin-top:8px}summary{cursor:pointer;color:var(--accent);font-size:15px;padding:8px 0}
+.tbl{overflow-x:auto;margin-top:12px}table{width:100%;border-collapse:collapse;font-size:14px;white-space:nowrap}
+th{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);color:var(--muted);font-weight:500}
+td{padding:9px 12px;border-bottom:1px solid var(--line)}
+.foot{color:var(--muted);font-size:14px;margin-top:16px}
+@media (max-width:700px){.card .v{font-size:36px}h1{font-size:24px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="top">
+  <div><h1>Site Speed Baseline</h1><div class="sub" id="asof">No data loaded</div></div>
+  <div class="ctl">
+    <select id="device"><option value="mobile">Mobile</option><option value="desktop">Desktop</option></select>
+    <select id="grain"><option value="month">By month</option><option value="week">By week</option></select>
+    <select id="ver"><option value="all">All versions</option><option value="v1">Current site (v1)</option><option value="v2">New site (v2)</option></select>
+    <label class="file">Load CSV<input type="file" id="file" accept=".csv"></label>
+  </div>
+</div>
+
+<div id="empty" class="panel empty" style="display:none">No data yet. The weekly workflow fills this after its first run.</div>
+
+<div id="content">
+<section class="panel">
+  <h2>Performance score</h2>
+  <p class="hint">Lighthouse score out of 100. Click a page to see its trend. 90+ is good, 50–89 needs improvement, under 50 is poor.</p>
+  <div class="cards" id="pageCards"></div>
+  <div class="chart"><canvas id="perfChart"></canvas></div>
+</section>
+
+<section class="panel">
+  <h2>Core Web Vitals — <span id="cwvPage"></span></h2>
+  <p class="hint">Click a metric to see its trend. Colors use Google's thresholds. Big number is the lab (Lighthouse) value; "Real users" is CrUX p75 where Google has it.</p>
+  <div class="cards" id="metricCards"></div>
+  <div class="chart"><canvas id="metricChart"></canvas></div>
+  <div class="legend" id="metricLegend"></div>
+</section>
+
+<section class="panel">
+  <details><summary>All data points</summary><div class="tbl" id="table"></div></details>
+  <p class="foot">Each point is the median of every run in that period. Performance changes of 5 points or less are normal noise. Lab = synthetic test on Google's servers. Real users = Chrome field data (28-day window). Source: <code>data/lighthouse_raw.csv</code>.</p>
+</section>
+</div>
+</div>
+
+<!-- The workflow injects data/lighthouse_raw.csv here on every run. -->
+<script id="csv-data" type="text/csv">
+run_date,run_week,run_month,run_index,page_key,url,device,source,site_version,performance,accessibility,best_practices,seo,fcp_s,lcp_s,tbt_ms,cls,speed_index_s,field_scope,field_cwv_status,field_lcp_ms,field_inp_ms,field_cls,lighthouse_version,chrome_version,notes
+</script>
+
+<script>
+const LABEL={home:'Homepage',category:'AR-15 Rifles',product:'PLx HTX-1 Product Page'};
+const PAGES=['home','category','product'];
+const METRICS=[
+  {key:'lcp',label:'LCP',lab:'lcp_s',field:'field_lcp_ms',fscale:1000,unit:'s',fmt:v=>v.toFixed(1)+' s',good:2.5,ni:4,desc:'Largest Contentful Paint'},
+  {key:'fcp',label:'FCP',lab:'fcp_s',field:null,unit:'s',fmt:v=>v.toFixed(1)+' s',good:1.8,ni:3,desc:'First Contentful Paint'},
+  {key:'cls',label:'CLS',lab:'cls',field:'field_cls',fscale:1,unit:'',fmt:v=>v.toFixed(2),good:0.1,ni:0.25,desc:'Cumulative Layout Shift'},
+  {key:'inp',label:'INP',lab:null,field:'field_inp_ms',fscale:1,unit:'ms',fmt:v=>Math.round(v)+' ms',good:200,ni:500,desc:'Interaction to Next Paint (real users only)'},
+  {key:'tbt',label:'TBT',lab:'tbt_ms',field:null,unit:'ms',fmt:v=>Math.round(v)+' ms',good:200,ni:600,desc:'Total Blocking Time'},
+];
+const MED=['performance','accessibility','best_practices','seo','fcp_s','lcp_s','tbt_ms','cls','speed_index_s'];
+const NUM=[...MED,'field_lcp_ms','field_inp_ms','field_cls','runs'];
+let RAW=[],DATA=[],selPage='home',selMetric='lcp',charts={};
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const $=id=>document.getElementById(id);
+
+function parseCSV(t){const lines=t.trim().split(/\r?\n/).filter(l=>l.trim());if(lines.length<2)return[];const h=lines[0].split(',');
+  return lines.slice(1).map(l=>{const c=l.split(',');const o={};h.forEach((k,i)=>o[k]=(c[i]??'').trim());NUM.forEach(k=>o[k]=o[k]===''||o[k]==null?null:+o[k]);return o})}
+function isoWeek(d){const x=new Date(d+'T00:00:00Z');const day=(x.getUTCDay()+6)%7;x.setUTCDate(x.getUTCDate()-day+3);const y=x.getUTCFullYear();const j4=new Date(Date.UTC(y,0,4));const w=1+Math.round(((x-j4)/864e5-3+((j4.getUTCDay()+6)%7))/7);return y+'-W'+String(w).padStart(2,'0')}
+function median(a){const s=a.filter(x=>x!=null&&!isNaN(x)).sort((x,y)=>x-y);if(!s.length)return null;const m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2}
+function aggregate(raw,grain){const g={};raw.forEach(r=>{const key=grain==='week'?(r.run_week||isoWeek(r.run_date)):r.run_month;const k=key+'|'+r.page_key+'|'+r.device;(g[k]=g[k]||{key,rows:[]}).rows.push(r)});
+  return Object.values(g).map(({key,rows})=>{const good=rows.filter(r=>r.performance!=null);const src=good.length?good:rows;
+    const o={period:key,run_date:rows.map(r=>r.run_date).sort().pop(),page_key:rows[0].page_key,device:rows[0].device,site_version:rows[0].site_version,runs:good.length};
+    MED.forEach(c=>{o[c]=median(src.map(r=>r[c]));if(o[c]!=null&&['performance','accessibility','best_practices','seo'].includes(c))o[c]=Math.round(o[c])});
+    ['field_scope','field_cwv_status','field_lcp_ms','field_inp_ms','field_cls'].forEach(c=>{const f=rows.find(r=>r[c]!=null&&r[c]!=='');o[c]=f?f[c]:null});
+    o.notes=[...new Set(rows.map(r=>r.notes).filter(Boolean))].join(' | ');return o}).sort((a,b)=>a.period.localeCompare(b.period))}
+function rows(){const d=$('device').value,v=$('ver').value;return DATA.filter(r=>r.device===d&&(v==='all'||r.site_version===v))}
+function periods(rs){return[...new Set(rs.map(r=>r.period))].sort()}
+function bandScore(s){return s==null?'none':s>=90?'good':s>=50?'ni':'poor'}
+function bandMetric(m,v){return v==null?'none':v<=m.good?'good':v<=m.ni?'ni':'poor'}
+const BANDC={good:'--good',ni:'--ni',poor:'--poor',none:'--line'};
+function delta(cur,prev,lowerBetter,noise){if(cur==null||prev==null)return{txt:'no prior period',cls:''};const d=cur-prev;if(Math.abs(d)<=noise)return{txt:'no real change',cls:''};
+  const better=lowerBetter?d<0:d>0;return{txt:(d>0?'+':'')+(Number.isInteger(d)?d:d.toFixed(2))+' vs prior',cls:better?'up':'down'}}
+function find(rs,pd,p){return rs.find(x=>x.period===pd&&x.page_key===p)}
+
+function render(){DATA=aggregate(RAW,$('grain').value);const rs=rows();
+  if(!rs.length){$('empty').style.display='';$('content').style.display='none';return}
+  $('empty').style.display='none';$('content').style.display='';
+  const ps=periods(rs),last=ps[ps.length-1],prev=ps[ps.length-2];
+  $('asof').textContent=`${$('device').value==='mobile'?'Mobile':'Desktop'} · data through ${last} · ${RAW.length} test runs since ${RAW.map(r=>r.run_date).sort()[0]}`;
+  if(!find(rs,last,selPage))selPage=PAGES.find(p=>find(rs,last,p))||'home';
+  // page cards
+  $('pageCards').innerHTML=PAGES.map(p=>{const c=find(rs,last,p),pr=find(rs,prev,p);if(!c)return'';
+    const b=bandScore(c.performance),d=delta(c.performance,pr&&pr.performance,false,5);
+    const f=c.field_cwv_status?`Real users: <b style="color:var(${c.field_cwv_status==='pass'?'--good':'--poor'})">${c.field_cwv_status==='pass'?'passing':'failing'} CWV</b>${c.field_scope==='origin'?' (site-wide)':''}`:'Real users: no data yet';
+    return`<div class="card ${b} ${p===selPage?'sel':''}" data-p="${p}"><div class="n"><span class="dot" style="background:var(${BANDC[b]})"></span>${LABEL[p]}</div><div class="v">${c.performance??'—'}</div><div class="d ${d.cls}">${d.txt}</div><div class="f">${f}</div></div>`}).join('');
+  document.querySelectorAll('#pageCards .card').forEach(el=>el.onclick=()=>{selPage=el.dataset.p;render()});
+  // perf chart: GSC-style bars for the selected page, colored by band
+  const perfData=ps.map(pd=>{const r=find(rs,pd,selPage);return r?r.performance:null});
+  const perfCol=ps.map(pd=>{const r=find(rs,pd,selPage);return css(BANDC[bandScore(r&&r.performance)])});
+  mk('perfChart',{type:'bar',data:{labels:ps,datasets:[{data:perfData,backgroundColor:perfCol,borderRadius:3,barPercentage:.7}]},options:base({y:{min:0,max:100}},i=>`${i.raw} / 100`)});
+  // metric cards for selected page
+  $('cwvPage').textContent=LABEL[selPage];
+  const cur=find(rs,last,selPage),pr=find(rs,prev,selPage);
+  const val=(r,m)=>{if(!r)return null;if(m.lab&&r[m.lab]!=null)return r[m.lab];if(m.field&&r[m.field]!=null)return r[m.field]/(m.fscale||1);return null};
+  $('metricCards').innerHTML=METRICS.map(m=>{const main=val(cur,m);const fld=m.field&&cur[m.field]!=null?cur[m.field]/(m.fscale||1):null;const b=bandMetric(m,main);
+    const d=delta(main,val(pr,m),true,m.key==='cls'?0.01:m.unit==='ms'?25:0.2);
+    const sub=m.lab?(fld!=null?`Real users: ${m.fmt(fld)}`:(m.field?'Real users: no data':'Lab only')):'Real users only — Lighthouse has no INP';
+    return`<div class="card ${b} ${m.key===selMetric?'sel':''}" data-m="${m.key}" title="${m.desc}"><div class="n"><span class="dot" style="background:var(${BANDC[b]})"></span>${m.label}</div><div class="v">${main==null?'—':m.fmt(main)}</div><div class="d ${d.cls}">${d.txt}</div><div class="f">${sub}</div></div>`}).join('');
+  document.querySelectorAll('#metricCards .card').forEach(el=>el.onclick=()=>{selMetric=el.dataset.m;render()});
+  // metric chart
+  const m=METRICS.find(x=>x.key===selMetric);const ds=[];
+  if(m.lab)ds.push({label:'Lab (Lighthouse)',data:ps.map(pd=>{const r=find(rs,pd,selPage);return r?r[m.lab]:null}),borderColor:css('--accent'),backgroundColor:css('--accent'),tension:.3,spanGaps:false,pointRadius:4});
+  if(m.field)ds.push({label:'Real users (CrUX p75)',data:ps.map(pd=>{const r=find(rs,pd,selPage);return r&&r[m.field]!=null?r[m.field]/(m.fscale||1):null}),borderColor:css('--muted'),backgroundColor:css('--muted'),borderDash:[6,4],tension:.3,spanGaps:false,pointRadius:4});
+  mk('metricChart',{type:'line',data:{labels:ps,datasets:ds},options:base({y:{min:0,title:m.unit}},i=>m.fmt(i.raw),[{y:m.good,c:'--good'},{y:m.ni,c:'--ni'}])});
+  $('metricLegend').innerHTML=ds.map(d=>`<span style="--c:${d.borderColor}">${d.label}</span>`).join('')+`<span style="--c:${css('--good')}">Good ≤ ${m.fmt(m.good)}</span><span style="--c:${css('--ni')}">Needs improvement ≤ ${m.fmt(m.ni)}</span>`;
+  // table
+  const cols=['period','page_key','device','site_version','runs','performance','lcp_s','fcp_s','cls','tbt_ms','field_cwv_status','field_lcp_ms','field_inp_ms','field_cls','accessibility','best_practices','seo','notes'];
+  const all=DATA.slice().sort((a,b)=>b.period.localeCompare(a.period)||a.page_key.localeCompare(b.page_key)||a.device.localeCompare(b.device));
+  $('table').innerHTML=`<table><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${all.map(r=>`<tr>${cols.map(c=>`<td>${r[c]??''}</td>`).join('')}</tr>`).join('')}</tbody></table>`;}
+
+function base(sc,tip,lines){const o={responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:tip}},thresholds:lines||[]},
+  scales:{x:{ticks:{color:css('--muted'),font:{size:13}},grid:{display:false}},y:{...(sc.y||{}),ticks:{color:css('--muted'),font:{size:13}},grid:{color:css('--line')},title:{display:!!(sc.y&&sc.y.title),text:sc.y&&sc.y.title,color:css('--muted')}}}};return o}
+const thresholdPlugin={id:'thresholds',afterDraw(ch){const lines=ch.options.plugins.thresholds;if(!Array.isArray(lines)||!lines.length)return;const {ctx,chartArea:{left,right,top,bottom},scales:{y}}=ch;
+  lines.forEach(t=>{const yy=y.getPixelForValue(t.y);if(yy<top||yy>bottom)return;ctx.save();ctx.strokeStyle=css(t.c);ctx.setLineDash([3,4]);ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(right,yy);ctx.stroke();ctx.restore()})}};
+Chart.register(thresholdPlugin);
+function mk(id,cfg){charts[id]&&charts[id].destroy();charts[id]=new Chart($(id),cfg)}
+['device','grain','ver'].forEach(id=>$(id).onchange=render);
+$('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{RAW=parseCSV(rd.result);render()};rd.readAsText(f)};
+RAW=parseCSV($('csv-data').textContent);render();
+</script>
+</body>
+</html>
