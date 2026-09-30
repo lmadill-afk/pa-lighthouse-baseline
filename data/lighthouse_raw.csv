@@ -1,1 +1,19 @@
 run_date,run_month,run_index,page_key,url,device,source,site_version,performance,accessibility,best_practices,seo,fcp_s,lcp_s,tbt_ms,cls,speed_index_s,field_scope,field_cwv_status,field_lcp_ms,field_inp_ms,field_cls,lighthouse_version,chrome_version,notes
+2026-09-30,2026-09,1,home,https://www.primaryarms.com/,mobile,psi_api,v1,,,,,,,,,,,,,,,,,psi_error HTTP Error 429: Too Many Requests
+2026-09-30,2026-09,1,home,https://www.primaryarms.com/,desktop,psi_api,v1,,,,,,,,,,,,,,,,,psi_error HTTP Error 429: Too Many Requests
+2026-09-30,2026-09,1,category,https://www.primaryarms.com/ar-15/rifles,mobile,psi_api,v1,,,,,,,,,,,,,,,,,psi_error HTTP Error 429: Too Many Requests
+2026-09-30,2026-09,1,category,https://www.primaryarms.com/ar-15/rifles,desktop,psi_api,v1,,,,,,,,,,,,,,,,,psi_error HTTP Error 429: Too Many Requests
+2026-09-30,2026-09,1,product,https://www.primaryarms.com/primary-arms-plx-htx-1-enclosed-reflex-sight-acss-vulcan-dot-reticle,mobile,psi_api,v1,,,,,,,,,,,,,,,,,psi_error HTTP Error 429: Too Many Requests
+2026-09-30,2026-09,1,product,https://www.primaryarms.com/primary-arms-plx-htx-1-enclosed-reflex-sight-acss-vulcan-dot-reticle,desktop,psi_api,v1,,,,,,,,,,,,,,,,,psi_error HTTP Error 429: Too Many Requests
+2026-09-30,2026-09,2,home,https://www.primaryarms.com/,mobile,psi_api,v1,,,,,,,,,,,,,,,,,psi_error HTTP Error 429: Too Many Requests
+2026-09-30,2026-09,2,home,https://www.primaryarms.com/,desktop,psi_api,v1,,,,,,,,,,,,,,,,,psi_error HTTP Error 429: Too Many Requests
+2026-09-30,2026-09,2,category,https://www.primaryarms.com/ar-15/rifles,mobile,psi_api,v1,,,,,,,,,,,,,,,,,psi_error HTTP Error 429: Too Many Requests
+2026-09-30,2026-09,2,category,https://www.primaryarms.com/ar-15/rifles,desktop,psi_api,v1,,,,,,,,,,,,,,,,,psi_error HTTP Error 429: Too Many Requests
+2026-09-30,2026-09,2,product,https://www.primaryarms.com/primary-arms-plx-htx-1-enclosed-reflex-sight-acss-vulcan-dot-reticle,mobile,psi_api,v1,,,,,,,,,,,,,,,,,psi_error HTTP Error 429: Too Many Requests
+2026-09-30,2026-09,2,product,https://www.primaryarms.com/primary-arms-plx-htx-1-enclosed-reflex-sight-acss-vulcan-dot-reticle,desktop,psi_api,v1,,,,,,,,,,,,,,,,,psi_error HTTP Error 429: Too Many Requests
+2026-09-30,2026-09,3,home,https://www.primaryarms.com/,mobile,psi_api,v1,,,,,,,,,,,,,,,,,psi_error HTTP Error 429: Too Many Requests
+2026-09-30,2026-09,3,home,https://www.primaryarms.com/,desktop,psi_api,v1,,,,,,,,,,,,,,,,,psi_error HTTP Error 429: Too Many Requests
+2026-09-30,2026-09,3,category,https://www.primaryarms.com/ar-15/rifles,mobile,psi_api,v1,,,,,,,,,,,,,,,,,psi_error HTTP Error 429: Too Many Requests
+2026-09-30,2026-09,3,category,https://www.primaryarms.com/ar-15/rifles,desktop,psi_api,v1,,,,,,,,,,,,,,,,,psi_error HTTP Error 429: Too Many Requests
+2026-09-30,2026-09,3,product,https://www.primaryarms.com/primary-arms-plx-htx-1-enclosed-reflex-sight-acss-vulcan-dot-reticle,mobile,psi_api,v1,,,,,,,,,,,,,,,,,psi_error HTTP Error 429: Too Many Requests
+2026-09-30,2026-09,3,product,https://www.primaryarms.com/primary-arms-plx-htx-1-enclosed-reflex-sight-acss-vulcan-dot-reticle,desktop,psi_api,v1,,,,,,,,,,,,,,,,,psi_error HTTP Error 429: Too Many Requests
