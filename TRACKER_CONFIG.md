@@ -4,9 +4,9 @@ Last updated: 2026-09-30
 
 ## Cadence
 
-- Run: first business day of each month, 9:00 AM Central (machine must be awake for the Chrome scheduled shortcut to fire).
-- Runs per page per device: **3**. Median is recorded.
-- Pre/post launch burst: switch to **weekly** for the 4 weeks before and 8 weeks after the new site's go-live date. Fill in the date here when known: `LAUNCH_DATE: TBD`
+- Sampling: **weekly**, Mondays 9:00 AM Central, via GitHub Actions (`.github/workflows/psi-weekly.yml`). 3 runs per page per device per week.
+- Reporting grain: **monthly** — the monthly CSV pools all runs in the month (~12 per page × device) and records the median. The dashboard can toggle weekly/monthly.
+- Launch: no burst needed at weekly cadence. Record the go-live date here and add a known-changes line: `LAUNCH_DATE: TBD`
 
 ## Pages
 
@@ -20,7 +20,9 @@ Last updated: 2026-09-30
 
 ## Source
 
-- Collection method: PageSpeed Insights web UI (`https://pagespeed.web.dev/`) via Claude in Chrome, **or** PSI API via the GitHub Action in `.github/workflows/psi-monthly.yml`. Record which in the `source` column (`psi_ui` or `psi_api`). Don't mix DevTools-panel runs into this dataset; they run on local hardware and aren't comparable.
+- Primary: PSI API via the GitHub Action in `.github/workflows/psi-weekly.yml` (`source=psi_api`). Runs automatically on the 1st.
+- Fallback: PageSpeed Insights web UI via the Claude in Chrome shortcut (`source=psi_ui`), only if the Action fails for a month. Paste its CSV block onto the end of the repo's `data/lighthouse_raw.csv` in GitHub; the next workflow run rebuilds the monthly file and dashboard from it. Don't mix DevTools-panel runs into this dataset; they run on local hardware and aren't comparable.
+- Repo: `lmadill-afk/pa-lighthouse-baseline`. If made public, `dashboard.html` can be served via GitHub Pages (Settings → Pages → Deploy from branch → main / root).
 - Lighthouse version and Chrome version are captured per run in the raw CSV when available.
 
 ## Flag thresholds
